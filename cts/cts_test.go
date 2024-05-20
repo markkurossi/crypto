@@ -173,19 +173,29 @@ func TestAESCTS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("TestAESCTS-%d: aes.NewCipher: %v", idx, err)
 		}
-		blockMode := NewCTSEncrypter(b, test.iv[:])
-		cts := blockMode.(*cts)
+		blockEnc := NewCTSEncrypter(b, test.iv[:])
+		encrypter := blockEnc.(*ctsEncrypter)
 
 		output := make([]byte, len(test.input))
-		cts.CryptBlocks(output, test.input)
+		encrypter.CryptBlocks(output, test.input)
 
 		if bytes.Compare(output, test.output) != 0 {
 			t.Errorf("TestAESCTS-%d: output: %x, expected: %x",
 				idx, output, test.output)
 		}
-		if bytes.Compare(cts.iv, test.nextIV) != 0 {
+		if bytes.Compare(encrypter.iv, test.nextIV) != 0 {
 			t.Errorf("TestAESCTS-%d: nextIV: %x, expected: %x",
-				idx, cts.iv, test.nextIV)
+				idx, encrypter.iv, test.nextIV)
+		}
+
+		decrypter := NewCTSDecrypter(b, test.iv[:])
+
+		plain := make([]byte, len(test.input))
+		decrypter.CryptBlocks(plain, output)
+
+		if bytes.Compare(plain, test.input) != 0 {
+			t.Errorf("TestAESCTS-%d: decrypt: output: %x, expected: %x",
+				idx, plain, test.input)
 		}
 	}
 }
